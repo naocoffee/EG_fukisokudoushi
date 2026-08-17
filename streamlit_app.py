@@ -291,7 +291,9 @@ GAME_HTML = r"""
       osc.stop(audioCtx.currentTime + dur);
     } catch (e) { /* audio not available, ignore */ }
   }
-  function sfxShoot()   { beep(880, 0.08, 'square', 0.05); }
+  const SHOOT_SFX_VOL = 0.05;
+  const BGM_VOL = SHOOT_SFX_VOL / 2; // BGM master volume is always half the shoot SFX volume
+  function sfxShoot()   { beep(880, 0.08, 'square', SHOOT_SFX_VOL); }
   function sfxCorrect() { beep(1200, 0.12, 'triangle', 0.09); beep(1600, 0.15, 'triangle', 0.07); }
   function sfxWrong()   { beep(120, 0.25, 'sawtooth', 0.1); }
   function sfxClearVerb(){ beep(700,0.08,'square',0.07); beep(1000,0.08,'square',0.07); beep(1400,0.14,'square',0.08); }
@@ -315,7 +317,7 @@ GAME_HTML = r"""
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (!bgmGain) {
       bgmGain = audioCtx.createGain();
-      bgmGain.gain.value = bgmMuted ? 0 : 0.05;
+      bgmGain.gain.value = bgmMuted ? 0 : BGM_VOL;
       bgmGain.connect(audioCtx.destination);
     }
   }
@@ -362,7 +364,7 @@ GAME_HTML = r"""
 
   function toggleMute() {
     bgmMuted = !bgmMuted;
-    if (bgmGain) bgmGain.gain.value = bgmMuted ? 0 : 0.05;
+    if (bgmGain) bgmGain.gain.value = bgmMuted ? 0 : BGM_VOL;
     updateMuteButton();
   }
 
