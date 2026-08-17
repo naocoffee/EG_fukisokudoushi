@@ -160,7 +160,7 @@ GAME_HTML = r"""
       正しいターゲットを撃ち抜け！<br><br>
       画面をドラッグして自機を移動<br>
       タップで発射<br>
-      ライフは5つ。落とすか間違えると-1！
+      ライフは5つ。間違ったターゲットを撃つと-1！
     </div>
     <button class="arcade-btn" id="startBtn">PUSH START</button>
   </div>
@@ -202,7 +202,7 @@ GAME_HTML = r"""
     { mean: "壊す",       base: "break", past: "broke", pp: "broken",  ppAlt: null   },
     { mean: "食べる",     base: "eat",   past: "ate",   pp: "eaten",   ppAlt: null   },
     { mean: "見る",       base: "see",   past: "saw",   pp: "seen",    ppAlt: null   },
-    { mean: "手に入れる", base: "get",   past: "got",   pp: "gotten",  ppAlt: "got"  },
+    { mean: "手に入れる", base: "get",   past: "got",   pp: "gotten",  ppAlt: null   },
     { mean: "行く",       base: "go",    past: "went",  pp: "gone",    ppAlt: null   },
     { mean: "始める",     base: "begin", past: "began", pp: "begun",   ppAlt: null   },
     { mean: "飲む",       base: "drink", past: "drank", pp: "drunk",   ppAlt: null   },
@@ -535,13 +535,14 @@ GAME_HTML = r"""
       }
     }
 
-    // targets falling off bottom
+    // targets falling off bottom - no longer costs a life, even if it was
+    // the currently-needed correct target; it's just removed (with a small
+    // neutral puff so a miss is still visible) and a new one keeps spawning.
     for (const t of targets.slice()) {
       if (t.y - t.r > H) {
         targets = targets.filter(x => x !== t);
         if (isAcceptable(t)) {
-          spawnBurst(t.x, H - 10, '#ff2b6b', 16);
-          loseLife();
+          spawnBurst(t.x, H - 10, '#9aa5b1', 12);
         }
       }
     }
