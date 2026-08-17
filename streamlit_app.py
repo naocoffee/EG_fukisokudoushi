@@ -659,7 +659,7 @@ GAME_HTML = r"""
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.4;
+      ctx.lineWidth = 3;
       const ty = t.y + Math.sin(t.wobble) * 3;
       ctx.strokeText(t.word, t.x, ty);
       ctx.fillText(t.word, t.x, ty);
