@@ -638,8 +638,6 @@ GAME_HTML = r"""
       ctx.fillStyle = grad;
       ctx.strokeStyle = `hsl(${t.hue}, 100%, 75%)`;
       ctx.lineWidth = 2;
-      ctx.shadowColor = `hsl(${t.hue}, 100%, 60%)`;
-      ctx.shadowBlur = 12;
       ctx.beginPath();
       const spikes = 9;
       for (let i = 0; i < spikes; i++) {
