@@ -49,7 +49,7 @@ GAME_HTML = r"""
   #gameContainer {
     position: relative;
     width: 100%;
-    aspect-ratio: 9 / 18;
+    aspect-ratio: 9 / 15;
     margin: 0 auto;
     border: 3px solid #00fff2;
     border-radius: 10px;
@@ -149,7 +149,7 @@ GAME_HTML = r"""
 
 <div id="shakeWrap">
 <div id="gameContainer">
-  <canvas id="gameCanvas" width="450" height="900" tabindex="0"></canvas>
+  <canvas id="gameCanvas" width="450" height="750" tabindex="0"></canvas>
 
   <!-- START SCREEN -->
   <div id="startScreen" class="overlay">
@@ -228,7 +228,7 @@ GAME_HTML = r"""
   // target's path. This is what prevents pieces from overlapping.
   const LANE_COUNT = 4;
   const LANE_WIDTH = W / LANE_COUNT;
-  const LANE_MIN_GAP = 290; // required vertical spacing before a lane can spawn again
+  const LANE_MIN_GAP = 240; // required vertical spacing before a lane can spawn again
   function laneCenterX(i) { return LANE_WIDTH * (i + 0.5); }
 
   let state = 'start'; // start | playing | gameover | timeup | clear
@@ -386,7 +386,7 @@ GAME_HTML = r"""
     const hues = [190, 320, 45, 270, 150];
     // speed is scaled up for the taller 9:20 canvas so the fall time (in
     // seconds) feels the same as on the old, shorter layout
-    const freshSpeed = 1.3 + Math.random() * 0.77 + Math.min(score / 380, 1.04);
+    const freshSpeed = 1.08 + Math.random() * 0.64 + Math.min(score / 380, 0.87);
     targets.push({
       word: word,
       verbIdx: verbIdx,
@@ -875,7 +875,7 @@ GAME_HTML = r"""
 </html>
 """
 
-components.html(GAME_HTML, height=775, scrolling=False)
+components.html(GAME_HTML, height=650, scrolling=False)
 
 st.markdown(
     """
