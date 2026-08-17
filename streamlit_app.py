@@ -633,11 +633,13 @@ GAME_HTML = r"""
       ctx.translate(t.x, t.y + Math.sin(t.wobble) * 3);
       ctx.rotate(t.rot);
       const grad = ctx.createRadialGradient(0, 0, t.r * 0.2, 0, 0, t.r);
-      grad.addColorStop(0, `hsl(${t.hue}, 90%, 55%)`);
-      grad.addColorStop(1, `hsl(${t.hue}, 90%, 22%)`);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#dcdcdc');
       ctx.fillStyle = grad;
-      ctx.strokeStyle = `hsl(${t.hue}, 100%, 75%)`;
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
+      ctx.shadowColor = `hsl(${t.hue}, 100%, 60%)`;
+      ctx.shadowBlur = 12;
       ctx.beginPath();
       const spikes = 9;
       for (let i = 0; i < spikes; i++) {
@@ -654,7 +656,7 @@ GAME_HTML = r"""
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#000000';
-      ctx.font = 'bold 16px "Yu Gothic", "YuGothic", "Hiragino Sans", sans-serif';
+      ctx.font = 'bold 16px Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.strokeStyle = '#ffffff';
