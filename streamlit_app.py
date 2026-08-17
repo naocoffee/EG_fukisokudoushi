@@ -173,14 +173,6 @@ GAME_HTML = r"""
     <button class="arcade-btn" id="retryBtnGO">RETRY</button>
   </div>
 
-  <!-- TIME UP SCREEN -->
-  <div id="timeUpScreen" class="overlay hidden">
-    <div class="title-glow" style="color:#ffe14d;text-shadow:0 0 8px #ffe14d,0 0 20px #ff9900;">TIME UP!</div>
-    <div class="result-score" id="finalScoreTU">SCORE: 0</div>
-    <div class="sub-glow" id="clearedCountTU">CLEARED: 0 / 14</div>
-    <button class="arcade-btn" id="retryBtnTU">RETRY</button>
-  </div>
-
   <!-- CLEAR SCREEN -->
   <div id="clearScreen" class="overlay hidden">
     <div class="title-glow" style="color:#00ff88;text-shadow:0 0 8px #00ff88,0 0 20px #00fff2;">🎉 ALL CLEAR! 🎉</div>
@@ -219,7 +211,6 @@ GAME_HTML = r"""
     { mean: "知っている", base: "know",  past: "knew",  pp: "known",   ppAlt: null   },
   ];
 
-  const TIME_LIMIT = 150; // seconds
   const MAX_LIFE = 5;
   const MAX_TARGETS = 8;
 
@@ -233,19 +224,19 @@ GAME_HTML = r"""
 
   // The ship is no longer pinned to the bottom edge - it can be dragged
   // anywhere inside this vertical band (kept clear of the top HUD banner).
-  const PLAYER_Y_MIN = 108;
+  const PLAYER_Y_MIN = 122;
   const PLAYER_Y_MAX = H - 20;
 
-  let state = 'start'; // start | playing | gameover | timeup | clear
+  let state = 'start'; // start | playing | gameover | clear
   let verbOrder = [];
   let verbPtr = 0;
   let currentStage = 'past'; // 'past' or 'pp'
   let life = MAX_LIFE;
   let score = 0;
   let clearedCount = 0;
-  let timeLeft = TIME_LIMIT;
   let lastTimeTick = 0;
   let lastCorrectSeenAt = 0;
+  let lastRandomWord = null;
 
   let targets = [];
   let bullets = [];
@@ -314,13 +305,14 @@ GAME_HTML = r"""
     life = MAX_LIFE;
     score = 0;
     clearedCount = 0;
-    timeLeft = TIME_LIMIT;
     targets = [];
     bullets = [];
     particles = [];
     player.x = W / 2;
+    player.y = H - 70;
     shakeFrames = 0;
     lastCorrectSeenAt = performance.now();
+    lastRandomWord = null;
     initStars();
   }
 
@@ -384,9 +376,16 @@ GAME_HTML = r"""
       form = currentStage;
       word = wordForForm(VERBS[verbIdx], form);
     } else {
-      verbIdx = Math.floor(Math.random() * VERBS.length);
-      form = Math.random() < 0.5 ? 'past' : 'pp';
-      word = wordForForm(VERBS[verbIdx], form);
+      // pick a random word, but reroll a few times if it repeats the
+      // previous random spawn so the sequence never feels patterned
+      let tries = 0;
+      do {
+        verbIdx = Math.floor(Math.random() * VERBS.length);
+        form = Math.random() < 0.5 ? 'past' : 'pp';
+        word = wordForForm(VERBS[verbIdx], form);
+        tries++;
+      } while (word === lastRandomWord && tries < 5);
+      lastRandomWord = word;
     }
     const hues = [190, 320, 45, 270, 150];
     // speed is scaled up for the taller 9:20 canvas so the fall time (in
@@ -559,15 +558,6 @@ GAME_HTML = r"""
 
     updateSpawning(dtMs);
 
-    // timer
-    if (state === 'playing') {
-      timeLeft -= dtMs / 1000;
-      if (timeLeft <= 0) {
-        timeLeft = 0;
-        endGame('timeup');
-      }
-    }
-
     stars.forEach(s => {
       s.y += s.speed;
       if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
@@ -690,21 +680,21 @@ GAME_HTML = r"""
     // top banner
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(0, 0, W, 92);
+    ctx.fillRect(0, 0, W, 104);
 
-    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.font = 'bold 26.4px "Courier New", monospace';
     ctx.fillStyle = '#ffe14d';
     ctx.shadowColor = '#ffe14d';
     ctx.shadowBlur = 10;
-    ctx.fillText(verb.mean + '  ( ' + verb.base + ' )', W / 2, 34);
+    ctx.fillText(verb.mean + '  ( ' + verb.base + ' )', W / 2, 54);
     ctx.shadowBlur = 0;
 
-    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.font = 'bold 22.1px "Courier New", monospace';
     ctx.fillStyle = currentStage === 'past' ? '#00fff2' : '#ff8bd1';
     const stageLabel = currentStage === 'past'
       ? '▶ 過去形 (Past) を撃て！'
       : '▶ 過去分詞形 (PP) を撃て！';
-    ctx.fillText(stageLabel, W / 2, 66);
+    ctx.fillText(stageLabel, W / 2, 90);
 
     // lives (hearts) top-left
     ctx.textAlign = 'left';
@@ -714,15 +704,13 @@ GAME_HTML = r"""
       ctx.fillText('♥', 16 + i * 28, 24);
     }
 
-    // score / cleared / timer top-right
+    // score / cleared top-right
     ctx.textAlign = 'right';
     ctx.font = '13px "Courier New", monospace';
     ctx.fillStyle = '#00fff2';
     ctx.fillText('SCORE ' + score, W - 14, 20);
     ctx.fillStyle = '#9aa5b1';
     ctx.fillText('CLEARED ' + clearedCount + ' / ' + VERBS.length, W - 14, 38);
-    ctx.fillStyle = timeLeft < 20 ? '#ff2b6b' : '#ffe14d';
-    ctx.fillText('TIME ' + Math.ceil(timeLeft) + 's', W - 14, 56);
   }
 
   function render() {
@@ -747,7 +735,7 @@ GAME_HTML = r"""
   // State transitions
   // ---------------------------------------------------------
   function showScreen(id) {
-    ['startScreen', 'gameOverScreen', 'timeUpScreen', 'clearScreen'].forEach(sid => {
+    ['startScreen', 'gameOverScreen', 'clearScreen'].forEach(sid => {
       document.getElementById(sid).classList.toggle('hidden', sid !== id);
     });
   }
@@ -758,7 +746,6 @@ GAME_HTML = r"""
     showScreen(null);
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('gameOverScreen').classList.add('hidden');
-    document.getElementById('timeUpScreen').classList.add('hidden');
     document.getElementById('clearScreen').classList.add('hidden');
     canvas.focus();
   }
@@ -769,12 +756,8 @@ GAME_HTML = r"""
       document.getElementById('finalScoreGO').textContent = 'SCORE: ' + score;
       document.getElementById('clearedCountGO').textContent = 'CLEARED: ' + clearedCount + ' / ' + VERBS.length;
       document.getElementById('gameOverScreen').classList.remove('hidden');
-    } else if (kind === 'timeup') {
-      document.getElementById('finalScoreTU').textContent = 'SCORE: ' + score;
-      document.getElementById('clearedCountTU').textContent = 'CLEARED: ' + clearedCount + ' / ' + VERBS.length;
-      document.getElementById('timeUpScreen').classList.remove('hidden');
     } else if (kind === 'clear') {
-      score += Math.ceil(timeLeft) * 5; // time bonus
+      score += 300; // full-clear bonus
       document.getElementById('finalScoreCL').textContent = 'SCORE: ' + score;
       document.getElementById('clearScreen').classList.remove('hidden');
     }
@@ -785,7 +768,6 @@ GAME_HTML = r"""
   // ---------------------------------------------------------
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('retryBtnGO').addEventListener('click', startGame);
-  document.getElementById('retryBtnTU').addEventListener('click', startGame);
   document.getElementById('retryBtnCL').addEventListener('click', startGame);
 
   window.addEventListener('keydown', (e) => {
