@@ -143,6 +143,27 @@ GAME_HTML = r"""
     max-width: 380px;
     margin: 0 auto;
   }
+
+  #muteBtn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    padding: 0;
+    touch-action: manipulation;
+  }
 </style>
 </head>
 <body>
@@ -150,6 +171,8 @@ GAME_HTML = r"""
 <div id="shakeWrap">
 <div id="gameContainer">
   <canvas id="gameCanvas" width="450" height="750" tabindex="0"></canvas>
+
+  <button id="muteBtn" aria-label="mute toggle">🔊</button>
 
   <!-- START SCREEN -->
   <div id="startScreen" class="overlay">
@@ -275,6 +298,75 @@ GAME_HTML = r"""
   function sfxLifeLost(){ beep(200, 0.3, 'sawtooth', 0.12); }
 
   // ---------------------------------------------------------
+  // BGM - a short procedurally-generated retro loop (Web Audio API only,
+  // no audio files / no network requests, so the app stays self-contained).
+  // ---------------------------------------------------------
+  let bgmGain = null;
+  let bgmTimer = null;
+  let bgmStep = 0;
+  let bgmMuted = false;
+  const BGM_STEP_MS = 190;
+  const BGM_LEAD = [440, 440, 523.25, 659.25, 587.33, 523.25, 440, 392,
+                     440, 440, 523.25, 659.25, 698.46, 659.25, 587.33, 493.88];
+  const BGM_BASS = [110, 110, 130.81, 130.81, 146.83, 146.83, 110, 98,
+                     110, 110, 130.81, 130.81, 174.61, 174.61, 146.83, 123.47];
+
+  function ensureAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!bgmGain) {
+      bgmGain = audioCtx.createGain();
+      bgmGain.gain.value = bgmMuted ? 0 : 0.05;
+      bgmGain.connect(audioCtx.destination);
+    }
+  }
+
+  function bgmNote(freq, dur, type, vol) {
+    try {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      g.gain.value = vol;
+      osc.connect(g);
+      g.connect(bgmGain);
+      osc.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* audio not available, ignore */ }
+  }
+
+  function bgmTick() {
+    if (!audioCtx || !bgmGain) return;
+    const i = bgmStep % BGM_LEAD.length;
+    bgmNote(BGM_LEAD[i], 0.16, 'square', 0.5);
+    if (i % 2 === 0) bgmNote(BGM_BASS[i], 0.22, 'triangle', 0.8);
+    bgmStep++;
+  }
+
+  function startBgm() {
+    ensureAudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (bgmTimer) return; // already playing
+    bgmStep = 0;
+    bgmTimer = setInterval(bgmTick, BGM_STEP_MS);
+  }
+
+  function stopBgm() {
+    if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+  }
+
+  function updateMuteButton() {
+    const btn = document.getElementById('muteBtn');
+    if (btn) btn.textContent = bgmMuted ? '🔇' : '🔊';
+  }
+
+  function toggleMute() {
+    bgmMuted = !bgmMuted;
+    if (bgmGain) bgmGain.gain.value = bgmMuted ? 0 : 0.05;
+    updateMuteButton();
+  }
+
+  // ---------------------------------------------------------
   // Init / reset
   // ---------------------------------------------------------
   function shuffledIndices(n) {
@@ -390,7 +482,11 @@ GAME_HTML = r"""
     const hues = [190, 320, 45, 270, 150];
     // speed is scaled up for the taller 9:20 canvas so the fall time (in
     // seconds) feels the same as on the old, shorter layout
-    const freshSpeed = 1.08 + Math.random() * 0.64 + Math.min(score / 380, 0.87);
+    // sqrt ramp: reaches most of its speed boost early on, then levels off,
+    // so the game doesn't feel sluggish for the first stretch of play while
+    // still capping out at the same top speed as before once score >= 380
+    const speedBoost = Math.sqrt(Math.min(score / 380, 1)) * 0.87;
+    const freshSpeed = 1.08 + Math.random() * 0.64 + speedBoost;
     targets.push({
       word: word,
       verbIdx: verbIdx,
@@ -709,9 +805,9 @@ GAME_HTML = r"""
     ctx.textAlign = 'right';
     ctx.font = '13px "Courier New", monospace';
     ctx.fillStyle = '#00fff2';
-    ctx.fillText('SCORE ' + score, W - 14, 20);
+    ctx.fillText('SCORE ' + score, W - 38, 20);
     ctx.fillStyle = '#9aa5b1';
-    ctx.fillText('CLEARED ' + clearedCount + ' / ' + VERBS.length, W - 14, 38);
+    ctx.fillText('CLEARED ' + clearedCount + ' / ' + VERBS.length, W - 38, 38);
   }
 
   function render() {
@@ -749,10 +845,12 @@ GAME_HTML = r"""
     document.getElementById('gameOverScreen').classList.add('hidden');
     document.getElementById('clearScreen').classList.add('hidden');
     canvas.focus();
+    startBgm();
   }
 
   function endGame(kind) {
     state = kind;
+    stopBgm();
     if (kind === 'gameover') {
       document.getElementById('finalScoreGO').textContent = 'SCORE: ' + score;
       document.getElementById('clearedCountGO').textContent = 'CLEARED: ' + clearedCount + ' / ' + VERBS.length;
@@ -770,6 +868,21 @@ GAME_HTML = r"""
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('retryBtnGO').addEventListener('click', startGame);
   document.getElementById('retryBtnCL').addEventListener('click', startGame);
+
+  const muteBtn = document.getElementById('muteBtn');
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    ensureAudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    toggleMute();
+  });
+  muteBtn.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    ensureAudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    toggleMute();
+  }, { passive: false });
 
   window.addEventListener('keydown', (e) => {
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Spacebar'].includes(e.key)) e.preventDefault();
