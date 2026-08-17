@@ -659,10 +659,7 @@ GAME_HTML = r"""
       ctx.font = 'bold 16px Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1;
       const ty = t.y + Math.sin(t.wobble) * 3;
-      ctx.strokeText(t.word, t.x, ty);
       ctx.fillText(t.word, t.x, ty);
     });
   }
