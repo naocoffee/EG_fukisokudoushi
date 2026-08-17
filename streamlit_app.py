@@ -652,12 +652,13 @@ GAME_HTML = r"""
       ctx.restore();
 
       ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 16px "Yu Gothic", "YuGothic", "Hiragino Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 1;
       const ty = t.y + Math.sin(t.wobble) * 3;
       ctx.strokeText(t.word, t.x, ty);
       ctx.fillText(t.word, t.x, ty);
