@@ -231,6 +231,11 @@ GAME_HTML = r"""
   const LANE_MIN_GAP = 240; // required vertical spacing before a lane can spawn again
   function laneCenterX(i) { return LANE_WIDTH * (i + 0.5); }
 
+  // The ship is no longer pinned to the bottom edge - it can be dragged
+  // anywhere inside this vertical band (kept clear of the top HUD banner).
+  const PLAYER_Y_MIN = 108;
+  const PLAYER_Y_MAX = H - 20;
+
   let state = 'start'; // start | playing | gameover | timeup | clear
   let verbOrder = [];
   let verbPtr = 0;
@@ -249,7 +254,7 @@ GAME_HTML = r"""
   let shakeFrames = 0;
 
   let player = { x: W / 2, y: H - 70, w: 40, h: 26, speed: 6 };
-  let keys = { left: false, right: false };
+  let keys = { left: false, right: false, up: false, down: false };
   let shootCooldown = 0;
   let flame = 0;
 
@@ -497,10 +502,13 @@ GAME_HTML = r"""
   // Update loop
   // ---------------------------------------------------------
   function update(dtMs) {
-    // player movement
+    // player movement (free 2D movement - keyboard fallback for desktop testing)
     if (keys.left) player.x -= player.speed;
     if (keys.right) player.x += player.speed;
+    if (keys.up) player.y -= player.speed;
+    if (keys.down) player.y += player.speed;
     player.x = Math.max(player.w / 2 + 4, Math.min(W - player.w / 2 - 4, player.x));
+    player.y = Math.max(PLAYER_Y_MIN, Math.min(PLAYER_Y_MAX, player.y));
 
     if (shootCooldown > 0) shootCooldown -= 1;
     if (flame > 0) flame -= 1;
@@ -781,21 +789,27 @@ GAME_HTML = r"""
   document.getElementById('retryBtnCL').addEventListener('click', startGame);
 
   window.addEventListener('keydown', (e) => {
-    if (['ArrowLeft', 'ArrowRight', ' ', 'Spacebar'].includes(e.key)) e.preventDefault();
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Spacebar'].includes(e.key)) e.preventDefault();
     if (e.key === 'ArrowLeft') keys.left = true;
     if (e.key === 'ArrowRight') keys.right = true;
+    if (e.key === 'ArrowUp') keys.up = true;
+    if (e.key === 'ArrowDown') keys.down = true;
     if (e.key === ' ' || e.key === 'Spacebar') shoot();
   });
   window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft') keys.left = false;
     if (e.key === 'ArrowRight') keys.right = false;
+    if (e.key === 'ArrowUp') keys.up = false;
+    if (e.key === 'ArrowDown') keys.down = false;
   });
 
   canvas.addEventListener('mousemove', (e) => {
     if (state !== 'playing') return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = W / rect.width;
-    player.x = (e.clientX - rect.left) * scaleX;
+    const scaleY = H / rect.height;
+    player.x = Math.max(player.w / 2 + 4, Math.min(W - player.w / 2 - 4, (e.clientX - rect.left) * scaleX));
+    player.y = Math.max(PLAYER_Y_MIN, Math.min(PLAYER_Y_MAX, (e.clientY - rect.top) * scaleY));
   });
   canvas.addEventListener('mousedown', () => { shoot(); });
   canvas.addEventListener('click', () => canvas.focus());
@@ -816,7 +830,9 @@ GAME_HTML = r"""
     if (!touch) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = W / rect.width;
-    player.x = (touch.clientX - rect.left) * scaleX;
+    const scaleY = H / rect.height;
+    player.x = Math.max(player.w / 2 + 4, Math.min(W - player.w / 2 - 4, (touch.clientX - rect.left) * scaleX));
+    player.y = Math.max(PLAYER_Y_MIN, Math.min(PLAYER_Y_MAX, (touch.clientY - rect.top) * scaleY));
   }
 
   canvas.addEventListener('touchstart', (e) => {
